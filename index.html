@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Запись в салон</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+  :root { --accent: #d6336c; --bg: #fff; --text: #222; --muted: #888; --card: #f6f6f8; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: -apple-system, Roboto, sans-serif; background: var(--bg); color: var(--text); padding-bottom: 90px; }
+  header { padding: 16px; text-align: center; font-size: 20px; font-weight: 700; }
+  section { padding: 0 16px 8px; }
+  h2 { font-size: 15px; margin: 16px 0 8px; color: var(--muted); font-weight: 600; text-transform: uppercase; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .grid.small { grid-template-columns: repeat(3, 1fr); }
+  .row { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; }
+  .opt { background: var(--card); border: 2px solid transparent; border-radius: 12px; padding: 12px; cursor: pointer; text-align: center; font-size: 14px; user-select: none; }
+  .opt small { display: block; color: var(--muted); margin-top: 4px; }
+  .opt.sel { border-color: var(--accent); background: #fff0f5; }
+  .opt.wide { min-width: 64px; }
+  input { width: 100%; padding: 12px; margin-bottom: 8px; border: 1px solid #ddd; border-radius: 10px; font-size: 16px; }
+  footer { position: fixed; bottom: 0; left: 0; right: 0; padding: 12px 16px; background: var(--bg); border-top: 1px solid #eee; }
+  button { width: 100%; padding: 14px; background: var(--accent); color: #fff; border: none; border-radius: 12px; font-size: 16px; font-weight: 600; }
+  button:disabled { background: #ccc; }
+</style>
+</head>
+<body>
+<header>💅 Запись в салон</header>
+
+<section><h2>1. Услуга</h2><div id="services" class="grid"></div></section>
+<section><h2>2. Мастер</h2><div id="masters" class="grid"></div></section>
+<section><h2>3. Дата</h2><div id="dates" class="row"></div></section>
+<section><h2>4. Время</h2><div id="times" class="grid small"></div></section>
+<section>
+  <h2>5. Ваши данные</h2>
+  <input id="name" placeholder="Имя" autocomplete="name">
+  <input id="phone" placeholder="Телефон" type="tel" autocomplete="tel">
+</section>
+
+<footer><button id="submit" disabled>Записаться</button></footer>
+
+<script>
+const tg = window.Telegram?.WebApp;
+if (tg) { tg.ready(); tg.expand(); }
+
+// ====== НАСТРОЙКА САЛОНА: меняйте услуги, мастеров и часы здесь ======
+const SERVICES = [
+  { id: "manicure", name: "Маникюр", icon: "💅", price: "1500 ₽" },
+  { id: "pedicure", name: "Педикюр", icon: "🦶", price: "2000 ₽" },
+  { id: "haircut", name: "Стрижка", icon: "✂️", price: "1200 ₽" },
+  { id: "brows", name: "Брови", icon: "👁️", price: "900 ₽" },
+];
+const MASTERS = [
+  { id: "anna", name: "Анна", icon: "👩" },
+  { id: "maria", name: "Мария", icon: "👩‍🦰" },
+  { id: "olga", name: "Ольга", icon: "👱‍♀️" },
+];
+const HOURS = [10, 11, 12, 13, 14, 15, 16, 17, 18, 19];
+const DAYS_AHEAD = 14;
+// =====================================================================
+
+const state = { service: null, master: null, date: null, time: null };
+const $ = id => document.getElementById(id);
+
+function makeOption(parent, item, key, html) {
+  const el = document.createElement("div");
+  el.className = "opt";
+  el.innerHTML = html;
+  el.onclick = () => {
+    state[key] = item.id;
+    [...parent.children].forEach(c => c.classList.remove("sel"));
+    el.classList.add("sel");
+    if (key === "date") { state.time = null; renderTimes(); }
+    updateSubmit();
+  };
+  parent.appendChild(el);
+  return el;
+}
+
+function renderServices() {
+  SERVICES.forEach(s => {
+    const el = makeOption($("services"), s, "service", "");
+    el.textContent = `${s.icon} ${s.name}`;
+    const small = document.createElement("small");
+    small.textContent = s.price;
+    el.appendChild(small);
+  });
+}
+
+function renderMasters() {
+  MASTERS.forEach(m => {
+    const el = makeOption($("masters"), m, "master", "");
+    el.textContent = `${m.icon} ${m.name}`;
+  });
+}
+
+function renderDates() {
+  const names = ["Вс", "Пн", "Вт", "Ср", "Чт", "Пт", "Сб"];
+  const box = $("dates");
+  for (let i = 0; i < DAYS_AHEAD; i++) {
+    const d = new Date();
+    d.setDate(d.getDate() + i);
+    const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    const el = makeOption(box, { id: iso }, "date", "");
+    el.classList.add("wide");
+    el.textContent = names[d.getDay()];
+    const small = document.createElement("small");
+    small.textContent = `${d.getDate()}.${String(d.getMonth() + 1).padStart(2, "0")}`;
+    el.appendChild(small);
+  }
+}
+
+function renderTimes() {
+  const box = $("times");
+  box.innerHTML = "";
+  if (!state.date) {
+    box.innerHTML = '<small style="color:#888">Сначала выберите дату</small>';
+    return;
+  }
+  HOURS.forEach(h => {
+    const t = `${String(h).padStart(2, "0")}:00`;
+    makeOption(box, { id: t }, "time", t);
+  });
+}
+
+function updateSubmit() {
+  const ok = state.service && state.master && state.date && state.time
+    && $("name").value.trim() && $("phone").value.trim().length >= 6;
+  $("submit").disabled = !ok;
+}
+
+["name", "phone"].forEach(id => $(id).addEventListener("input", updateSubmit));
+
+$("submit").onclick = () => {
+  const payload = {
+    service: SERVICES.find(s => s.id === state.service).name,
+    master: MASTERS.find(m => m.id === state.master).name,
+    date: state.date,
+    time: state.time,
+    name: $("name").value.trim(),
+    phone: $("phone").value.trim(),
+  };
+  if (tg) {
+    tg.sendData(JSON.stringify(payload));
+  } else {
+    alert("Откройте приложение через Telegram.\n" + JSON.stringify(payload));
+  }
+};
+
+renderServices();
+renderMasters();
+renderDates();
+renderTimes();
+</script>
+</body>
+</html>
