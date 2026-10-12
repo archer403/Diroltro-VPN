@@ -5,34 +5,134 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Запись в салон</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script src="anim.js"></script>
 <style>
-  :root { --accent: #d6336c; --bg: #fff; --text: #222; --muted: #888; --card: #f6f6f8; }
-  * { box-sizing: border-box; }
-  body { margin: 0; font-family: -apple-system, Roboto, sans-serif; background: var(--bg); color: var(--text); padding-bottom: 90px; }
-  header { padding: 16px; text-align: center; font-size: 20px; font-weight: 700; }
-  section { padding: 0 16px 8px; }
-  h2 { font-size: 15px; margin: 16px 0 8px; color: var(--muted); font-weight: 600; text-transform: uppercase; }
-  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-  .grid.small { grid-template-columns: repeat(3, 1fr); }
-  .row { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; }
-  .opt { background: var(--card); border: 2px solid transparent; border-radius: 12px; padding: 12px; cursor: pointer; text-align: center; font-size: 14px; user-select: none; }
-  .opt small { display: block; color: var(--muted); margin-top: 4px; }
-  .opt.sel { border-color: var(--accent); background: #fff0f5; }
-  .opt.wide { min-width: 64px; }
-  input { width: 100%; padding: 12px; margin-bottom: 8px; border: 1px solid #ddd; border-radius: 10px; font-size: 16px; }
-  footer { position: fixed; bottom: 0; left: 0; right: 0; padding: 12px 16px; background: var(--bg); border-top: 1px solid #eee; }
-  button { width: 100%; padding: 14px; background: var(--accent); color: #fff; border: none; border-radius: 12px; font-size: 16px; font-weight: 600; }
-  button:disabled { background: #ccc; }
+  :root {
+    --accent: #d6336c;
+    --accent-soft: #fff0f6;
+    --bg: #fafafb;
+    --text: #1d1d1f;
+    --muted: #8a8a93;
+    --card: #ffffff;
+    --line: #ececf1;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body {
+    margin: 0;
+    font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: linear-gradient(160deg, rgba(255, 228, 240, .9), rgba(228, 240, 255, .9)) fixed,
+                url("images/background.jpg") center / cover fixed no-repeat, var(--bg);
+    color: var(--text);
+    padding-bottom: 96px;
+    min-height: 100vh;
+  }
+  header {
+    background: linear-gradient(135deg, rgba(255, 107, 154, .85), rgba(214, 51, 108, .85)),
+                url("images/hero.jpg") center / cover no-repeat;
+    color: #fff;
+    padding: 22px 16px 26px;
+    border-radius: 0 0 24px 24px;
+    text-align: center;
+    box-shadow: 0 8px 24px rgba(214, 51, 108, .25);
+  }
+  header h1 { margin: 0; font-size: 22px; font-weight: 700; }
+  header p { margin: 6px 0 0; font-size: 13px; opacity: .9; }
+  section { padding: 0 16px; margin-top: 18px; }
+  h2 {
+    font-size: 12px; margin: 0 0 10px; color: var(--muted);
+    font-weight: 700; letter-spacing: .6px; text-transform: uppercase;
+  }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .grid.times { grid-template-columns: repeat(3, 1fr); }
+  .row { display: flex; gap: 8px; overflow-x: auto; padding: 2px 2px 8px; scrollbar-width: none; }
+  .row::-webkit-scrollbar { display: none; }
+  .opt {
+    background: rgba(255, 255, 255, .55);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 2px solid rgba(255, 255, 255, .7);
+    border-radius: 16px;
+    padding: 14px 10px;
+    text-align: center;
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
+    user-select: none;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, .04);
+    transition: transform .15s ease, border-color .2s, background .2s, box-shadow .2s;
+  }
+  .opt:active { transform: scale(.97); }
+  .opt img.svc { width: 100%; height: 70px; object-fit: cover; border-radius: 10px; margin-bottom: 6px; }
+  .opt small { display: block; color: var(--muted); margin-top: 4px; font-size: 12px; }
+  .opt.sel {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+    box-shadow: 0 6px 16px rgba(214, 51, 108, .18);
+  }
+  .opt.sel small { color: var(--accent); }
+  .opt.day { min-width: 62px; flex: 0 0 auto; padding: 12px 8px; }
+  .opt.busy {
+    background: #f3f3f5;
+    color: #b5b5bc;
+    text-decoration: line-through;
+    cursor: not-allowed;
+    box-shadow: none;
+    border-style: dashed;
+  }
+  .opt.busy:active { transform: none; }
+  .hint { color: var(--muted); font-size: 13px; min-height: 18px; margin-top: 8px; }
+  .hint.warn { color: #c77700; }
+  input {
+    width: 100%;
+    padding: 14px;
+    margin-bottom: 10px;
+    background: rgba(255, 255, 255, .6);
+    backdrop-filter: blur(10px);
+    border: 2px solid rgba(255, 255, 255, .7);
+    border-radius: 14px;
+    font-size: 16px;
+    outline: none;
+    transition: border-color .2s;
+  }
+  input:focus { border-color: var(--accent); }
+  footer {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    padding: 12px 16px 18px;
+    background: rgba(255, 255, 255, .6);
+    backdrop-filter: blur(14px);
+    border-top: 1px solid var(--line);
+  }
+  button {
+    width: 100%;
+    padding: 15px;
+    background: linear-gradient(135deg, #ff6b9a, #d6336c);
+    color: #fff;
+    border: none;
+    border-radius: 14px;
+    font-size: 16px;
+    font-weight: 700;
+    box-shadow: 0 8px 20px rgba(214, 51, 108, .3);
+    transition: opacity .2s, transform .15s;
+  }
+  button:active { transform: scale(.98); }
+  button:disabled { background: #d4d4da; box-shadow: none; }
 </style>
 </head>
 <body>
-<header>💅 Запись в салон</header>
+<header>
+  <h1>💅 Запись в салон</h1>
+  <p>Выберите услугу, мастера и удобное время</p>
+</header>
 
-<section><h2>1. Услуга</h2><div id="services" class="grid"></div></section>
-<section><h2>2. Мастер</h2><div id="masters" class="grid"></div></section>
-<section><h2>3. Дата</h2><div id="dates" class="row"></div></section>
-<section><h2>4. Время</h2><div id="times" class="grid small"></div></section>
-<section>
+<section class="step"><h2>1. Услуга</h2><div id="services" class="grid"></div></section>
+<section class="step"><h2>2. Мастер</h2><div id="masters" class="grid"></div></section>
+<section class="step"><h2>3. Дата</h2><div id="dates" class="row"></div></section>
+<section class="step">
+  <h2>4. Время</h2>
+  <div id="times" class="grid times"></div>
+  <div id="timeNote" class="hint"></div>
+</section>
+<section class="step">
   <h2>5. Ваши данные</h2>
   <input id="name" placeholder="Имя" autocomplete="name">
   <input id="phone" placeholder="Телефон" type="tel" autocomplete="tel">
@@ -44,7 +144,10 @@
 const tg = window.Telegram?.WebApp;
 if (tg) { tg.ready(); tg.expand(); }
 
-// ====== НАСТРОЙКА САЛОНА: меняйте услуги, мастеров и часы здесь ======
+// ====== НАСТРОЙКА САЛОНА ======
+// Адрес API бота (туннель). Пример: "https://xxxx.trycloudflare.com". Без слеша в конце.
+const API_URL = "";
+
 const SERVICES = [
   { id: "manicure", name: "Маникюр", icon: "💅", price: "1500 ₽" },
   { id: "pedicure", name: "Педикюр", icon: "🦶", price: "2000 ₽" },
@@ -58,20 +161,35 @@ const MASTERS = [
 ];
 const HOURS = [10, 11, 12, 13, 14, 15, 16, 17, 18, 19];
 const DAYS_AHEAD = 14;
-// =====================================================================
+// ==============================
 
 const state = { service: null, master: null, date: null, time: null };
+let busyTimes = [];
 const $ = id => document.getElementById(id);
+const masterName = () => MASTERS.find(m => m.id === state.master)?.name || "";
 
-function makeOption(parent, item, key, html) {
+function createOption(parent, id, key, html, extraClass = "") {
   const el = document.createElement("div");
-  el.className = "opt";
+  el.className = "opt " + extraClass;
   el.innerHTML = html;
   el.onclick = () => {
-    state[key] = item.id;
+    if (el.classList.contains("busy")) {
+      window.Anim?.shake(el);
+      $("timeNote").textContent = "Это время уже занято. Выберите другое.";
+      $("timeNote").classList.add("warn");
+      return;
+    }
+    window.Anim?.press(el);
+    state[key] = id;
     [...parent.children].forEach(c => c.classList.remove("sel"));
     el.classList.add("sel");
-    if (key === "date") { state.time = null; renderTimes(); }
+    window.Anim?.pop(el);
+
+    if (key === "date" || key === "master") {
+      state.time = null;
+      if (state.date && state.master) loadBusy();
+      else { busyTimes = []; renderTimes(); }
+    }
     updateSubmit();
   };
   parent.appendChild(el);
@@ -80,48 +198,67 @@ function makeOption(parent, item, key, html) {
 
 function renderServices() {
   SERVICES.forEach(s => {
-    const el = makeOption($("services"), s, "service", "");
-    el.textContent = `${s.icon} ${s.name}`;
-    const small = document.createElement("small");
-    small.textContent = s.price;
-    el.appendChild(small);
+    const el = createOption($("services"), s.id, "service",
+      `<img class="svc" src="images/services/${s.id}.jpg" alt="" onerror="this.remove()">${s.icon} ${s.name}<small>${s.price}</small>`);
   });
 }
 
 function renderMasters() {
-  MASTERS.forEach(m => {
-    const el = makeOption($("masters"), m, "master", "");
-    el.textContent = `${m.icon} ${m.name}`;
-  });
+  MASTERS.forEach(m => createOption($("masters"), m.id, "master", `${m.icon} ${m.name}`));
 }
 
 function renderDates() {
   const names = ["Вс", "Пн", "Вт", "Ср", "Чт", "Пт", "Сб"];
-  const box = $("dates");
   for (let i = 0; i < DAYS_AHEAD; i++) {
     const d = new Date();
     d.setDate(d.getDate() + i);
     const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-    const el = makeOption(box, { id: iso }, "date", "");
-    el.classList.add("wide");
-    el.textContent = names[d.getDay()];
-    const small = document.createElement("small");
-    small.textContent = `${d.getDate()}.${String(d.getMonth() + 1).padStart(2, "0")}`;
-    el.appendChild(small);
+    const label = `${names[d.getDay()]}<small>${String(d.getDate()).padStart(2, "0")}.${String(d.getMonth() + 1).padStart(2, "0")}</small>`;
+    createOption($("dates"), iso, "date", label, "day");
   }
 }
 
 function renderTimes() {
   const box = $("times");
   box.innerHTML = "";
-  if (!state.date) {
-    box.innerHTML = '<small style="color:#888">Сначала выберите дату</small>';
+  const note = $("timeNote");
+  note.classList.remove("warn");
+  if (!state.date || !state.master) {
+    note.textContent = "Сначала выберите мастера и дату";
     return;
   }
-  HOURS.forEach(h => {
+  HOURS.forEach((h, i) => {
     const t = `${String(h).padStart(2, "0")}:00`;
-    makeOption(box, { id: t }, "time", t);
+    const busy = busyTimes.includes(t);
+    const el = createOption(box, t, "time", t, busy ? "busy" : "");
+    if (busy) el.innerHTML = `${t}<small>занято</small>`;
+    setTimeout(() => window.Anim?.fadeUp(el), i * 30);
   });
+}
+
+async function loadBusy() {
+  const note = $("timeNote");
+  note.classList.remove("warn");
+  if (!API_URL) {
+    busyTimes = [];
+    note.textContent = "Проверка занятости ещё не подключена";
+    renderTimes();
+    return;
+  }
+  note.textContent = "Проверяем свободное время…";
+  const requestedFor = `${state.master}|${state.date}`;
+  try {
+    const url = `${API_URL}/api/slots?master=${encodeURIComponent(masterName())}&date=${state.date}`;
+    const r = await fetch(url);
+    const data = await r.json();
+    if (`${state.master}|${state.date}` !== requestedFor) return; // пользователь уже сменил выбор
+    busyTimes = data.busy || [];
+    note.textContent = "";
+  } catch (e) {
+    busyTimes = [];
+    note.textContent = "Не удалось проверить время. Сервер всё равно проверит запись.";
+  }
+  renderTimes();
 }
 
 function updateSubmit() {
@@ -133,25 +270,27 @@ function updateSubmit() {
 ["name", "phone"].forEach(id => $(id).addEventListener("input", updateSubmit));
 
 $("submit").onclick = () => {
+  const btn = $("submit");
   const payload = {
     service: SERVICES.find(s => s.id === state.service).name,
-    master: MASTERS.find(m => m.id === state.master).name,
+    master: masterName(),
     date: state.date,
     time: state.time,
     name: $("name").value.trim(),
     phone: $("phone").value.trim(),
   };
-  if (tg) {
-    tg.sendData(JSON.stringify(payload));
-  } else {
-    alert("Откройте приложение через Telegram.\n" + JSON.stringify(payload));
-  }
+  window.Anim?.success(btn);
+  setTimeout(() => {
+    if (tg) tg.sendData(JSON.stringify(payload));
+    else alert("Откройте приложение через Telegram.\n" + JSON.stringify(payload));
+  }, 250);
 };
 
 renderServices();
 renderMasters();
 renderDates();
 renderTimes();
+window.Anim?.stagger(document.querySelectorAll(".step"), 90, 80);
 </script>
 </body>
 </html>
